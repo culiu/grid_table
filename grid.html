@@ -26,7 +26,7 @@
  
 <script type="text/javascript">
 $(function () {
-    var align_columns = ["invid", "invdate", "text", "amount", "tax", "email",  "note", "total_amount"];
+    var align_columns = ["invid", "invdate", "text", "amount", "tax", "email",  "position", "total_amount"];
     var lastSel;
 
     var grid_table;
@@ -45,6 +45,20 @@ $(function () {
     function get_row(done) {
       var edit_row_clone = jQuery.extend(true, {}, edit_row);
       done(edit_row_clone); 
+    }
+
+    function autocomplete_element(value, options) {
+      var ac = $('<input type="text"/>');
+      ac.val(value);
+      ac.autocomplete({source: ["Software Enginner", "Product Manager", "Manager", "Admin"]}); 
+      return ac.get(0);;
+    }
+
+    function autocomplete_value(elem, op, value) {
+      if (op == "set") {
+        $(elem).val(value); 
+      } 
+      return $(elem).val();
     }
 
     function isEquivalent(a, b) {
@@ -77,6 +91,12 @@ $(function () {
       // Do Nothing 
     }
 
+    function calculate_footer() {
+      var sum=grid_table.jqGrid('getCol', 'total_amount', false, 'sum').toFixed(2);
+      grid_table.jqGrid('footerData', 'set', {invid: 'Total:', total_amount: sum});
+
+    }
+
     function setGridFromUndo(edit_row_item) {
 			if (!edit_row_item) 
 			  return;
@@ -90,6 +110,7 @@ $(function () {
       grid_table.jqGrid('setRowData', id, data);
       grid_table.jqGrid('editRow', id);
       grid_table.jqGrid('saveRow', id);
+      calculate_footer();
       //dont' forget to save
     }
 
@@ -106,6 +127,7 @@ $(function () {
       grid_table.jqGrid('setRowData', id, data);
       grid_table.jqGrid('editRow', id);
       grid_table.jqGrid('saveRow', id);
+      calculate_footer();
     }
 
     grid_table = $("#list").jqGrid({
@@ -128,7 +150,14 @@ $(function () {
             },
 //            { name: "total", label: "Total", width: 80, editable: true, align: "right" },
             { name: "email", label: "Email", index: "email", width: 100, editable: true, align: "center" },
-            { name: "note", label: "Notes", index: "note",  width: 150, editable: true, sortable: false, align: "center"},
+            { name:'location', label: "Location", index: "location", edittype:'select', editoptions:{value: "Beijing:Beijing; Hong Kong:Hong Kong; Shenzhen:Shenzhen"}, editable: true, search: true, align: "center" },
+//            { name: "note", label: "Notes", index: "note",  width: 150, editable: true, sortable: false, align: "center"},
+            { name: "position", label: "Position", index: "position",  width: 150, editable: true, sortable: false, align: "center", edittype: "custom", 
+              editoptions: {
+                custom_element: autocomplete_element,
+                custom_value: autocomplete_value    
+              }
+            },
             { name: "total_amount", label: "Total amount", width: 80, align: "center"}
         ],
         pager: "#pager",
@@ -143,8 +172,12 @@ $(function () {
         caption: "Multi Select Example",
         editurl: "update.php",
         loadonce: true,
+        footerrow: true,
         onSelectRow: function(id) {
           $('#'+id+"_invdate").datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
+        },
+        loadComplete: function() {
+          calculate_footer(); 
         },
         ondblClickRow: function(id) {
           if (id && id !== lastSel) {
@@ -164,6 +197,7 @@ $(function () {
               var new_val = rowData;
               rowData.total_amount = (parseFloat(rowData.amount) + parseFloat(rowData.tax)).toFixed(2);
               $(this).jqGrid('setRowData', rowId, rowData);
+              calculate_footer();
               if (!isEquivalent(new_val, old_val)) {
 								edit_row.val = old_val;
 								history.save();
@@ -177,21 +211,15 @@ $(function () {
           var items = data.rows;
           if (items) {
             for (i=0; i<items.length; i++) {
-              items[i].cell[7] = (parseFloat(items[i].cell[3]) + parseFloat(items[i].cell[4])).toFixed(2);
+              items[i].cell[8] = (parseFloat(items[i].cell[3]) + parseFloat(items[i].cell[4])).toFixed(2);
             } 
           }
         }
    }); 
 
-    $("#list").jqGrid('navGrid', '#pager', {add: false, edit: false, del: true},
-        {},
-        {},
-        {
-          onclickSubmit: function (params, postdata) {
-//            $(this).jqGrid('delGridRow', postdata, {});
-          }
-       }
-        );
+    $("#list").jqGrid('navGrid', '#pager', 
+        {add: false, edit: false, del: true}
+    );
     $("#list").jqGrid('inlineNav', '#pager', {addParams: {position: "last"}});
     $("#list").jqGrid('navButtonAdd', '#pager', 
           {
@@ -255,7 +283,7 @@ $(function () {
     $("#list").jqGrid('navButtonAdd', '#pager', 
           {
             caption: "",
-						buttonicon: "ui-icon-undo",
+						buttonicon: "ui-icon-arrowrefresh-1-n",
 						onClickButton: function () { 
               history.undo(setGridFromUndo);
 				    }
@@ -264,7 +292,7 @@ $(function () {
     $("#list").jqGrid('navButtonAdd', '#pager', 
           {
             caption: "",
-						buttonicon: "ui-icon-redo",
+						buttonicon: "ui-icon-arrowrefresh-1-e",
 						onClickButton: function () { 
               history.redo(setGridFromRedo);
 				    }

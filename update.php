@@ -10,14 +10,16 @@ $amount = $_POST['amount'];
 $tax = $_POST['tax'];
 //$total = $_POST['total'];
 $email = $_POST['email'];
-$note = $_POST['note'];
+$location = $_POST['location'];
+//$note = $_POST['note'];
+$position = $_POST['position'];
 
 
 if ($_POST['oper'] == 'edit') {
-  mysql_query("UPDATE invheader SET invdate='$date',amount=$amount,tax=$tax,email='$email',note='$note' where invid=$id") or die(mysql_error());
+  mysql_query("UPDATE invheader SET invdate='$date',amount=$amount,tax=$tax,email='$email',location='$location', position='$position' where invid=$id") or die(mysql_error());
 }
 else if ($_POST['oper'] == 'add') {
-  mysql_query("INSERT into invheader(invdate, amount, tax, email, note) VALUES ('$date', '$amount', '$tax', '$email', '$note')") or die(mysql_error());
+  mysql_query("INSERT into invheader(invdate, amount, tax, email, location, position) VALUES ('$date', '$amount', '$tax', '$email', '$location', '$position')") or die(mysql_error());
 }
 else if ($_POST['oper'] == 'del') {
     $id_array = explode(',', $id);
