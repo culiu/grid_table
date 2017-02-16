@@ -29,9 +29,11 @@ $(function () {
     var align_columns = ["invid", "invdate", "text", "amount", "tax", "email",  "note", "total_amount"];
     var lastSel;
 
+    var grid_table;
+
     var edit_row = {
       "row_id" : "",
-      "row_data" : {} 
+      "val" : {}
     };
 
     var history = new SimpleUndo({
@@ -45,11 +47,68 @@ $(function () {
       done(edit_row_clone); 
     }
 
+    function isEquivalent(a, b) {
+          // Create arrays of property names
+			var aProps = Object.getOwnPropertyNames(a);
+			var bProps = Object.getOwnPropertyNames(b);
+
+			// If number of properties is different,
+			// objects are not equivalent
+			if (aProps.length != bProps.length) {
+					return false;
+			}
+
+			for (var i = 0; i < aProps.length; i++) {
+					var propName = aProps[i];
+
+					// If values of same property are not equal,
+					// objects are not equivalent
+					if (a[propName] !== b[propName]) {
+							return false;
+					}
+			}
+
+			// If we made it this far, objects
+			// are considered equivalent
+			return true; 
+    }
+
     function update_buttons() {
       // Do Nothing 
     }
 
-    $("#list").jqGrid({
+    function setGridFromUndo(edit_row_item) {
+			if (!edit_row_item) 
+			  return;
+      var id = edit_row_item.row_id; 
+      var old_data = $('#list').jqGrid('getRowData', id); 
+      var data = edit_row_item.val;
+      if (isEquivalent(old_data, data)) {
+        history.undo(setGridFromUndo);
+        return;
+      }
+      grid_table.jqGrid('setRowData', id, data);
+      grid_table.jqGrid('editRow', id);
+      grid_table.jqGrid('saveRow', id);
+      //dont' forget to save
+    }
+
+    function setGridFromRedo(edit_row_item) {
+      if (!edit_row_item)
+        return;
+      var id = edit_row_item.row_id; 
+      var old_data = $('#list').jqGrid('getRowData', id);
+      var data = edit_row_item.val;
+      if (isEquivalent(old_data, data)) {
+        history.redo(setGridFromRedo);
+        return;
+      } 
+      grid_table.jqGrid('setRowData', id, data);
+      grid_table.jqGrid('editRow', id);
+      grid_table.jqGrid('saveRow', id);
+    }
+
+    grid_table = $("#list").jqGrid({
         url: "example.php",
         datatype: "json",
         mtype: "POST",
@@ -59,8 +118,8 @@ $(function () {
                 editformbutton: true              
               } 
             },
-            { name: "invid", label: "Inv No", width: 55, align: "center"},
-            { name: "invdate", label: "Date", index:'po_date', width: 150, editable: true, edittype:'text', editoptions:{size:20,maxlength:20,dataInit:getDate},formatter:fixDate,formatoptions:{srcformat:'Y-m-d H:i:s',newformat:'Y-m-d H:i:s'}, align: "center"},
+            { name: "invid", label: "Inv No", width: 55, editable: true, align: "center"},
+            { name: "invdate", label: "Date", index:'po_date', width: 150, editable: true, edittype:'text', editoptions:{size:20,maxlength:20},formatter:fixDate,formatoptions:{srcformat:'Y-m-d H:i:s',newformat:'Y-m-d H:i:s'}, align: "center"},
             { name: "amount", label: "Amount", width: 80, editable: true, align: "center", 
               editrules: {required: true} 
             },
@@ -85,17 +144,30 @@ $(function () {
         editurl: "update.php",
         ondblClickRow: function(id) {
           if (id && id !== lastSel) {
-            jQuery(this).jqGrid('editRow', id, {
-              keys: true,
-              oneditfunc: function() {
-              },
-              aftersavefunc: function(rowId) {
-                var rowData = $(this).jqGrid('getRowData', rowId);
-                rowData.total_amount = (parseFloat(rowData.amount) + parseFloat(rowData.tax)).toFixed(2);
-                $(this).jqGrid('setRowData', rowId, rowData);
-              } 
-            });
+            jQuery(this).restoreRow(lastSel);
+            lastSel = id;
           }
+          edit_row.row_id = id;
+          var old_val = jQuery(this).jqGrid('getRowData', id); 
+          jQuery(this).jqGrid('editRow', id, {
+            keys: true,
+            oneditfunc: function() {
+              $('#'+id+"_invdate").datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
+              $('#'+id+"_invid").get(0).focus();
+            },
+            aftersavefunc: function(rowId) {
+              var rowData = $(this).jqGrid('getRowData', rowId);
+              var new_val = rowData;
+              rowData.total_amount = (parseFloat(rowData.amount) + parseFloat(rowData.tax)).toFixed(2);
+              $(this).jqGrid('setRowData', rowId, rowData);
+              if (!isEquivalent(new_val, old_val)) {
+								edit_row.val = old_val;
+								history.save();
+								edit_row.val = new_val;
+								history.save();
+              }
+            } 
+          });
         },
         beforeProcessing: function(data) {
           var items = data.rows;
@@ -181,7 +253,7 @@ $(function () {
             caption: "",
 						buttonicon: "ui-icon-undo",
 						onClickButton: function () { 
-              alert('undo');
+              history.undo(setGridFromUndo);
 				    }
           } 
     );
@@ -190,7 +262,7 @@ $(function () {
             caption: "",
 						buttonicon: "ui-icon-redo",
 						onClickButton: function () { 
-              alert('redo');
+              history.redo(setGridFromRedo);
 				    }
           } 
     );
