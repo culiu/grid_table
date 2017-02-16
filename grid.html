@@ -26,7 +26,7 @@
  
 <script type="text/javascript">
 $(function () {
-    var align_columns = ["invid", "invdate", "text", "amount", "tax", "email",  "position", "total_amount"];
+    var align_columns = ["invid", "invdate", "text", "amount", "tax", "email",  "position", "total_amount", "note"];
     var lastSel;
 
     var grid_table;
@@ -35,6 +35,8 @@ $(function () {
       "row_id" : "",
       "val" : {}
     };
+    
+    var col_selected;
 
     var history = new SimpleUndo({
       maxLength: 10,
@@ -135,12 +137,12 @@ $(function () {
         datatype: "json",
         mtype: "POST",
         colModel: [
-            { name: "Actions", width: 60, formatter: 'actions', search: false,
+            { name: "Actions", width: 60, formatter: 'actions', search: false, frozen: true,
               formatoptions: {
                 editformbutton: true              
               } 
             },
-            { name: "invid", label: "Inv No", index: "invid", width: 55, search:true, editable: true, align: "center"},
+            { name: "invid", label: "Inv No", index: "invid", width: 70, search:true, editable: true, align: "center", frozen: true},
             { name: "invdate", label: "Date", index: "invdate", width: 150, editable: true, edittype:'text', editoptions:{size:20,maxlength:20},formatter:fixDate,formatoptions:{srcformat:'Y-m-d H:i:s',newformat:'Y-m-d H:i:s'}, align: "center"},
             { name: "amount", label: "Amount", index: "amount", width: 80, editable: true, align: "center", 
               editrules: {required: true} 
@@ -148,17 +150,17 @@ $(function () {
             { name: "tax", label: "Tax", index: "tax", width: 80, editable: true, align: "center",
               editrules: {required: true, number: true,  custom: true, custom_func:checkTax}
             },
+            { name: "total_amount", label: "Total amount", width: 80, align: "center"},
 //            { name: "total", label: "Total", width: 80, editable: true, align: "right" },
             { name: "email", label: "Email", index: "email", width: 100, editable: true, align: "center" },
             { name:'location', label: "Location", index: "location", edittype:'select', editoptions:{value: "Beijing:Beijing; Hong Kong:Hong Kong; Shenzhen:Shenzhen"}, editable: true, search: true, align: "center" },
-//            { name: "note", label: "Notes", index: "note",  width: 150, editable: true, sortable: false, align: "center"},
             { name: "position", label: "Position", index: "position",  width: 150, editable: true, sortable: false, align: "center", edittype: "custom", 
               editoptions: {
                 custom_element: autocomplete_element,
                 custom_value: autocomplete_value    
               }
             },
-            { name: "total_amount", label: "Total amount", width: 80, align: "center"}
+            { name: "note", label: "Notes", index: "note",  width: 150, editable: true, sortable: false, align: "center"}
         ],
         pager: "#pager",
         rowNum: 10,
@@ -169,28 +171,44 @@ $(function () {
         gridview: true,
         autoencode: true,
         multiselect: true,
-        caption: "Multi Select Example",
+        shrinkToFit: false,
+        height: 'auto',
+        width: 700,
+        caption: "Smart Table",
         editurl: "update.php",
         loadonce: true,
         footerrow: true,
-        onSelectRow: function(id) {
-          $('#'+id+"_invdate").datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
-        },
+        rownumbers: true,
+//        onSelectRow: function(id) {
+//          $('#'+id+"_invdate").datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
+//        },
         loadComplete: function() {
           calculate_footer(); 
         },
-        ondblClickRow: function(id) {
-          if (id && id !== lastSel) {
-            jQuery(this).restoreRow(lastSel);
-            lastSel = id;
+//        onCellSelect: function(row, col, content, event) {
+ //         var cm = $(this).jqGrid('getGridParam', 'colModel');
+  //        col_selected = cm[col].name; 
+   //     },
+        beforeSelectRow: function(rowId) {
+          if (rowId && rowId !== lastSel) {
+            $(this).jqGrid('restoreRow', lastSel);
+            lastSel = rowId;
           }
+          return true;
+        },
+        ondblClickRow: function(id, iRow, iCol, e) {
+          var p = $(this)[0].p; 
+					if ((p.multiselect && $.inArray(id, p.selarrrow) < 0) || id !== p.selrow) {
+							// if the row are still non-selected
+							$(this).jqGrid("setSelection",id,true);
+					}
+
           edit_row.row_id = id;
           var old_val = jQuery(this).jqGrid('getRowData', id); 
           jQuery(this).jqGrid('editRow', id, {
             keys: true,
-            oneditfunc: function() {
+            oneditfunc: function(id) {
               $('#'+id+"_invdate").datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
-              $('#'+id+"_invid").get(0).focus();
             },
             aftersavefunc: function(rowId) {
               var rowData = $(this).jqGrid('getRowData', rowId);
@@ -206,12 +224,18 @@ $(function () {
               }
             } 
           });
+
+          setTimeout(function() {
+          $("input, select", e.target).focus();
+          }
+          ,100);
+          return;
         },
         beforeProcessing: function(data) {
           var items = data.rows;
           if (items) {
             for (i=0; i<items.length; i++) {
-              items[i].cell[8] = (parseFloat(items[i].cell[3]) + parseFloat(items[i].cell[4])).toFixed(2);
+              items[i].cell[5] = (parseFloat(items[i].cell[3]) + parseFloat(items[i].cell[4])).toFixed(2);
             } 
           }
         }
@@ -299,6 +323,8 @@ $(function () {
           } 
     );
     $("#list").jqGrid('filterToolbar', {searchOperators: true});
+    $("#list").jqGrid('setFrozenColumns');
+    $("#list").jqGrid('gridResize', {minWidth: 450, minHeight: 150});
 }); 
 
 function fixDate(cellvalue, options, rowObject) {

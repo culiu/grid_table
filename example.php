@@ -59,7 +59,7 @@ $start = $limit*$page - $limit;
 if($start <0) $start = 0; 
  
 // the actual query for the grid data 
-$SQL = "SELECT invid, invdate, amount, tax, email, location, position FROM invheader ORDER BY $sidx $sord LIMIT $start , $limit"; 
+$SQL = "SELECT invid, invdate, amount, tax, email, location, position, note FROM invheader ORDER BY $sidx $sord LIMIT $start , $limit"; 
 
 $result = mysql_query( $SQL ) or die("Couldn't execute query.".mysql_error()); 
  
@@ -94,7 +94,7 @@ $responce->records = $count;
 $i=0;
 while($row = mysql_fetch_array($result, MYSQL_ASSOC)) {
   $responce->rows[$i]['id']=$row[invid];
-  $responce->rows[$i]['cell']=array('',$row[invid],$row[invdate],$row[amount],$row[tax],$row[email], $row[location], $row[position],'');
+  $responce->rows[$i]['cell']=array('',$row[invid],$row[invdate],$row[amount],$row[tax],'', $row[email], $row[location], $row[position],$row[note]);
   $i++;
 }
 echo json_encode($responce);
