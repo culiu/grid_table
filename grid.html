@@ -1,0 +1,226 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>My First Grid</title>
+ 
+<link rel="stylesheet" type="text/css" media="screen" href="css/ui-lightness/jquery-ui.css" />
+<link rel="stylesheet" type="text/css" media="screen" href="css/ui.jqgrid.css" />
+<link rel="stylesheet" type="text/css" media="screen" href="timepicker/jquery-ui-timepicker-addon.min.css"/>
+
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-size: 75%;
+  }
+</style>
+ 
+<script src="js/jquery-1.7.2.min.js" type="text/javascript"></script>
+<script src="js/i18n/grid.locale-en.js" type="text/javascript"></script>
+<script src="js/jquery.jqGrid.min.js" type="text/javascript"></script>
+<script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
+<script src="timepicker/jquery-ui-timepicker-addon.min.js"></script>
+<script src="simple-undo/simple-undo.js"></script>
+ 
+<script type="text/javascript">
+$(function () {
+    var align_columns = ["invid", "invdate", "text", "amount", "tax", "email",  "note", "total_amount"];
+    var lastSel;
+
+    var edit_row = {
+      "row_id" : "",
+      "row_data" : {} 
+    };
+
+    var history = new SimpleUndo({
+      maxLength: 10,
+      provider: get_row,
+      onUpdate: update_buttons    
+    });
+
+    function get_row(done) {
+      var edit_row_clone = jQuery.extend(true, {}, edit_row);
+      done(edit_row_clone); 
+    }
+
+    function update_buttons() {
+      // Do Nothing 
+    }
+
+    $("#list").jqGrid({
+        url: "example.php",
+        datatype: "json",
+        mtype: "POST",
+        colModel: [
+            { name: "Actions", width: 60, formatter: 'actions',
+              formatoptions: {
+                editformbutton: true              
+              } 
+            },
+            { name: "invid", label: "Inv No", width: 55, align: "center"},
+            { name: "invdate", label: "Date", index:'po_date', width: 150, editable: true, edittype:'text', editoptions:{size:20,maxlength:20,dataInit:getDate},formatter:fixDate,formatoptions:{srcformat:'Y-m-d H:i:s',newformat:'Y-m-d H:i:s'}, align: "center"},
+            { name: "amount", label: "Amount", width: 80, editable: true, align: "center", 
+              editrules: {required: true} 
+            },
+            { name: "tax", label: "Tax", width: 80, editable: true, align: "center",
+              editrules: {required: true, number: true,  custom: true, custom_func:checkTax}
+            },
+//            { name: "total", label: "Total", width: 80, editable: true, align: "right" },
+            { name: "email", label: "Email", width: 100, editable: true, align: "center" },
+            { name: "note", label: "Notes", width: 150, editable: true, sortable: false, align: "center"},
+            { name: "total_amount", label: "Total amount", width: 80, align: "center"}
+        ],
+        pager: "#pager",
+        rowNum: 10,
+        rowList: [10, 20, 30],
+        sortname: "invid",
+        sortorder: "desc",
+        viewrecords: true,
+        gridview: true,
+        autoencode: true,
+        multiselect: true,
+        caption: "Multi Select Example",
+        editurl: "update.php",
+        ondblClickRow: function(id) {
+          if (id && id !== lastSel) {
+            jQuery(this).jqGrid('editRow', id, {
+              keys: true,
+              oneditfunc: function() {
+              },
+              aftersavefunc: function(rowId) {
+                var rowData = $(this).jqGrid('getRowData', rowId);
+                rowData.total_amount = (parseFloat(rowData.amount) + parseFloat(rowData.tax)).toFixed(2);
+                $(this).jqGrid('setRowData', rowId, rowData);
+              } 
+            });
+          }
+        },
+        beforeProcessing: function(data) {
+          var items = data.rows;
+          if (items) {
+            for (i=0; i<items.length; i++) {
+              items[i].cell[7] = (parseFloat(items[i].cell[3]) + parseFloat(items[i].cell[4])).toFixed(2);
+            } 
+          }
+        }
+   }); 
+
+    $("#list").jqGrid('navGrid', '#pager', {add: false, edit: false, del: true, search: true},
+        {},
+        {},
+        {
+          onclickSubmit: function (params, postdata) {
+//            $(this).jqGrid('delGridRow', postdata, {});
+          }
+       }
+        );
+    $("#list").jqGrid('inlineNav', '#pager', {addParams: {position: "last"}});
+    $("#list").jqGrid('navButtonAdd', '#pager', 
+          {
+            caption: "",
+						buttonicon: "ui-icon-calculator",
+						title: "Choose columns", 
+						onClickButton: function () {
+				
+              $(this).jqGrid('columnChooser',{
+						    width: 550, 
+						    dialog_opts: {
+									modal: true,
+									minWidth: 470,
+									height: 470,
+									show: 'blind',
+									hide: 'explode',
+									dividerLocation: 0.5
+						    },
+						
+					    });
+					
+				    }
+          } 
+    );
+    $("#list").jqGrid('navButtonAdd', '#pager', 
+          {
+            caption: "",
+						buttonicon: "ui-icon-caret-1-w",
+						onClickButton: function () { 
+							for (var col in align_columns) {
+                $(this).jqGrid("setColProp", align_columns[col], {align: "left"});
+                $(this).trigger( 'reloadGrid' );
+              }
+				    }
+          } 
+    );
+    $("#list").jqGrid('navButtonAdd', '#pager', 
+          {
+            caption: "",
+						buttonicon: "ui-icon-bullet",
+						onClickButton: function () { 
+							for (var col in align_columns) {
+                $(this).jqGrid("setColProp", align_columns[col], {align: "center"});
+                $(this).trigger( 'reloadGrid' );
+              }
+				    }
+          } 
+    );
+    $("#list").jqGrid('navButtonAdd', '#pager', 
+          {
+            caption: "",
+						buttonicon: "ui-icon-caret-1-e",
+						onClickButton: function () { 
+							for (var col in align_columns) {
+                $(this).jqGrid("setColProp", align_columns[col], {align: "right"});
+                $(this).trigger( 'reloadGrid' );
+              }
+				    }
+          } 
+    );
+    $("#list").jqGrid('navButtonAdd', '#pager', 
+          {
+            caption: "",
+						buttonicon: "ui-icon-undo",
+						onClickButton: function () { 
+              alert('undo');
+				    }
+          } 
+    );
+    $("#list").jqGrid('navButtonAdd', '#pager', 
+          {
+            caption: "",
+						buttonicon: "ui-icon-redo",
+						onClickButton: function () { 
+              alert('redo');
+				    }
+          } 
+    );
+}); 
+
+function fixDate(cellvalue, options, rowObject) {
+  if (cellvalue!='0000-00-00') {
+    return cellvalue; 
+  }
+  else {
+    return "xxxx";
+  }
+}
+
+function checkTax(value, colname) {
+  if (value < 0 || value > 1000)
+    return [false, "Tax should not between 0 and 1000"];
+  else
+    return [true, ""];
+}
+
+function getDate(el) {
+  $(el).datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
+}
+
+</script>
+
+</head>
+<body>
+    <table id="list"><tr><td></td></tr></table> 
+    <div id="pager"></div> 
+</body>
+</html>
