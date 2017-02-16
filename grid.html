@@ -113,22 +113,22 @@ $(function () {
         datatype: "json",
         mtype: "POST",
         colModel: [
-            { name: "Actions", width: 60, formatter: 'actions',
+            { name: "Actions", width: 60, formatter: 'actions', search: false,
               formatoptions: {
                 editformbutton: true              
               } 
             },
-            { name: "invid", label: "Inv No", width: 55, editable: true, align: "center"},
-            { name: "invdate", label: "Date", index:'po_date', width: 150, editable: true, edittype:'text', editoptions:{size:20,maxlength:20},formatter:fixDate,formatoptions:{srcformat:'Y-m-d H:i:s',newformat:'Y-m-d H:i:s'}, align: "center"},
-            { name: "amount", label: "Amount", width: 80, editable: true, align: "center", 
+            { name: "invid", label: "Inv No", index: "invid", width: 55, search:true, editable: true, align: "center"},
+            { name: "invdate", label: "Date", index: "invdate", width: 150, editable: true, edittype:'text', editoptions:{size:20,maxlength:20},formatter:fixDate,formatoptions:{srcformat:'Y-m-d H:i:s',newformat:'Y-m-d H:i:s'}, align: "center"},
+            { name: "amount", label: "Amount", index: "amount", width: 80, editable: true, align: "center", 
               editrules: {required: true} 
             },
-            { name: "tax", label: "Tax", width: 80, editable: true, align: "center",
+            { name: "tax", label: "Tax", index: "tax", width: 80, editable: true, align: "center",
               editrules: {required: true, number: true,  custom: true, custom_func:checkTax}
             },
 //            { name: "total", label: "Total", width: 80, editable: true, align: "right" },
-            { name: "email", label: "Email", width: 100, editable: true, align: "center" },
-            { name: "note", label: "Notes", width: 150, editable: true, sortable: false, align: "center"},
+            { name: "email", label: "Email", index: "email", width: 100, editable: true, align: "center" },
+            { name: "note", label: "Notes", index: "note",  width: 150, editable: true, sortable: false, align: "center"},
             { name: "total_amount", label: "Total amount", width: 80, align: "center"}
         ],
         pager: "#pager",
@@ -142,6 +142,7 @@ $(function () {
         multiselect: true,
         caption: "Multi Select Example",
         editurl: "update.php",
+        loadonce: true,
         onSelectRow: function(id) {
           $('#'+id+"_invdate").datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
         },
@@ -182,7 +183,7 @@ $(function () {
         }
    }); 
 
-    $("#list").jqGrid('navGrid', '#pager', {add: false, edit: false, del: true, search: true},
+    $("#list").jqGrid('navGrid', '#pager', {add: false, edit: false, del: true},
         {},
         {},
         {
@@ -269,6 +270,7 @@ $(function () {
 				    }
           } 
     );
+    $("#list").jqGrid('filterToolbar', {searchOperators: true});
 }); 
 
 function fixDate(cellvalue, options, rowObject) {
