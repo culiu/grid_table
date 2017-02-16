@@ -142,6 +142,9 @@ $(function () {
         multiselect: true,
         caption: "Multi Select Example",
         editurl: "update.php",
+        onSelectRow: function(id) {
+          $('#'+id+"_invdate").datetimepicker({dateFormat:"yy-mm-dd", timeFormat:"hh:mm:ss"});
+        },
         ondblClickRow: function(id) {
           if (id && id !== lastSel) {
             jQuery(this).restoreRow(lastSel);

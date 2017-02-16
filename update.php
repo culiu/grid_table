@@ -14,10 +14,10 @@ $note = $_POST['note'];
 
 
 if ($_POST['oper'] == 'edit') {
-  mysql_query("UPDATE invheader SET invid='$id', invdate='$date',amount=$amount,tax=$tax,email='$email',note='$note' where invid=$id") or die(mysql_error());
+  mysql_query("UPDATE invheader SET invdate='$date',amount=$amount,tax=$tax,email='$email',note='$note' where invid=$id") or die(mysql_error());
 }
 else if ($_POST['oper'] == 'add') {
-  mysql_query("INSERT into invheader(invdate, amount, tax, total, note) VALUES ('$date', '$amount', '$tax', '$email', '$note')") or die(mysql_error());
+  mysql_query("INSERT into invheader(invdate, amount, tax, email, note) VALUES ('$date', '$amount', '$tax', '$email', '$note')") or die(mysql_error());
 }
 else if ($_POST['oper'] == 'del') {
     $id_array = explode(',', $id);
