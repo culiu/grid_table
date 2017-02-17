@@ -145,10 +145,12 @@ $(function () {
             { name: "invid", label: "Inv No", index: "invid", width: 70, search:true, editable: true, align: "center", frozen: true},
             { name: "invdate", label: "Date", index: "invdate", width: 150, editable: true, edittype:'text', editoptions:{size:20,maxlength:20},formatter:fixDate,formatoptions:{srcformat:'Y-m-d H:i:s',newformat:'Y-m-d H:i:s'}, align: "center"},
             { name: "amount", label: "Amount", index: "amount", width: 80, editable: true, align: "center", 
-              editrules: {required: true} 
+              editrules: {required: true, number: true, custom: true, custom_func:checkAmount},
+              cellattr: function() {return 'title="amount should be a positive number"';}
             },
             { name: "tax", label: "Tax", index: "tax", width: 80, editable: true, align: "center",
-              editrules: {required: true, number: true,  custom: true, custom_func:checkTax}
+              editrules: {required: true, number: true,  custom: true, custom_func:checkTax}, 
+              cellattr: function() {return 'title="tax should be smaller than 1000"';}
             },
             { name: "total_amount", label: "Total amount", width: 80, align: "center"},
 //            { name: "total", label: "Total", width: 80, editable: true, align: "right" },
@@ -184,11 +186,17 @@ $(function () {
 //        },
         loadComplete: function() {
           calculate_footer(); 
+          $("#list td").click(function() {
+            var col = $(this).parent().children().index($(this));
+            $(this).tooltip();
+          });
+
         },
-//        onCellSelect: function(row, col, content, event) {
+ //       onCellSelect: function(row, col, content, event) {
+ //         console.log(row, col);
  //         var cm = $(this).jqGrid('getGridParam', 'colModel');
   //        col_selected = cm[col].name; 
-   //     },
+ //       },
         beforeSelectRow: function(rowId) {
           if (rowId && rowId !== lastSel) {
             $(this).jqGrid('restoreRow', lastSel);
@@ -197,6 +205,7 @@ $(function () {
           return true;
         },
         ondblClickRow: function(id, iRow, iCol, e) {
+//          console.log('dbl');
           var p = $(this)[0].p; 
 					if ((p.multiselect && $.inArray(id, p.selarrrow) < 0) || id !== p.selrow) {
 							// if the row are still non-selected
@@ -334,6 +343,14 @@ function fixDate(cellvalue, options, rowObject) {
   else {
     return "xxxx";
   }
+}
+
+function checkAmount(value, colname) {
+  if (value < 0)
+    return [false, "Amount should be a positive number"];
+  else
+    return [true, ""];
+
 }
 
 function checkTax(value, colname) {
